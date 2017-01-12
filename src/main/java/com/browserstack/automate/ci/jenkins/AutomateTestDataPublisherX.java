@@ -56,16 +56,20 @@ public class AutomateTestDataPublisherX extends Recorder implements SimpleBuildS
   public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException {
 
       AutomateTestDataPublisher atdp = new AutomateTestDataPublisher();
-
       TestResultAction report = build.getAction(TestResultAction.class);
-
       if (report != null) {        
+        List<TestResultAction.Data> data = new ArrayList<TestResultAction.Data>();
+
         TestResult result = report.getResult();
-        atdp.getTestData(build, launcher, listener, result);
+
+        TestResultAction.Data d = atdp.getTestData(build, launcher, listener, result);
+
+        data.add(d);
+        report.setData(data);
+        build.save();
       } else {
-        atdp.getTestData(build, launcher, listener, null);
+        TestResultAction.Data d = atdp.getTestData(build, launcher, listener, null);
       }
-      
       return true;
   }
 

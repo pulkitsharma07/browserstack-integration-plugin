@@ -33,6 +33,9 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.List;
+import java.util.ArrayList;
+
 
 public class AutomateTestDataPublisher extends TestDataPublisher {
     private static final String TAG = "[BrowserStack]";
@@ -65,63 +68,68 @@ public class AutomateTestDataPublisher extends TestDataPublisher {
         int testCount = 0;
         int sessionCount = 0;
 
-        for (SuiteResult suiteResult : testResult.getSuites()) {
-            List<CaseResult> cases = suiteResult.getCases();
-            testCount += cases.size();
-            logDebug(listener.getLogger(), suiteResult.getName() + ": " + cases.size() + " test cases found.");
+        if (testResult != null) {
+            for (SuiteResult suiteResult : testResult.getSuites()) {
+                List<CaseResult> cases = suiteResult.getCases();
+                testCount += cases.size();
+                logDebug(listener.getLogger(), suiteResult.getName() + ": " + cases.size() + " test cases found.");
 
-            for (CaseResult caseResult : cases) {
-                String testCaseName = getTestCaseName(caseResult);
+                for (CaseResult caseResult : cases) {
+                    String testCaseName = getTestCaseName(caseResult);
 
-                Long testIndex = testCaseIndices.containsKey(testCaseName) ? testCaseIndices.get(testCaseName) : -1L;
-                testCaseIndices.put(testCaseName, ++testIndex);
-                logDebug(listener.getLogger(), testCaseName + " / " + testCaseName + " <=> " + testIndex);
+                    Long testIndex = testCaseIndices.containsKey(testCaseName) ? testCaseIndices.get(testCaseName) : -1L;
+                    testCaseIndices.put(testCaseName, ++testIndex);
+                    logDebug(listener.getLogger(), testCaseName + " / " + testCaseName + " <=> " + testIndex);
 
-                String testId = String.format("%s{%d}", testCaseName, testIndex);
-                if (testSessionMap.containsKey(testId)) {
-                    AutomateTestAction automateTestAction = new AutomateTestAction(run, caseResult, testSessionMap.get(testId));
-                    automateActionData.registerTestAction(caseResult.getId(), automateTestAction);
-                    logDebug(listener.getLogger(), "registerTestAction: " + testId + " => " + automateTestAction);
-                    sessionCount++;
+                    String testId = String.format("%s{%d}", testCaseName, testIndex);
+                    if (testSessionMap.containsKey(testId)) {
+                        AutomateTestAction automateTestAction = new AutomateTestAction(run, caseResult, testSessionMap.get(testId));
+                        automateActionData.registerTestAction(caseResult.getId(), automateTestAction);
+                        logDebug(listener.getLogger(), "registerTestAction: " + testId + " => " + automateTestAction);
+                        sessionCount++;
+                    }
                 }
             }
+
+            testCaseIndices.clear();
+            log(listener.getLogger(), testCount + " tests recorded");
+            log(listener.getLogger(), sessionCount + " sessions captured");
+            log(listener.getLogger(), "Publishing test results: SUCCESS");
+            return automateActionData;
+        } else {
+
+            List<String[]> parsedValues = new ArrayList<String[]>();
+            BufferedReader in = null;
+            try {
+                in = new BufferedReader(new InputStreamReader(run.getLogInputStream()));
+                String line;
+                while ((line = in.readLine()) != null) {
+                    String [] parsedValue = findSessionAndJobId(line);
+
+                    if(parsedValue[0] != null && parsedValue[1] != null){
+                      parsedValues.add(parsedValue);
+                    }
+                }
+            } catch (IOException e) {
+                System.out.println("EXCEPTION  " + e.getMessage());
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            
+            for (String[] parsedValue : parsedValues) {
+                automateActionData.registerTestAction(parsedValue[1], new AutomateTestAction(run,null,parsedValue[0]));
+                 System.out.println(" SessionId = " + parsedValue[0] + " JobId = " + parsedValue[1]);
+            }
+            
+            return automateActionData;
         }
 
-        //USE if testResult is null
-
-        // BufferedReader in = null;
-        // try {
-        //     in = new BufferedReader(new InputStreamReader(build.getLogInputStream()));
-        //     String line;
-        //     while ((line = in.readLine()) != null) {
-        //         String [] parsedValue = findSessionAndJobId(line);
-
-        //         if(parsedValue[0] != null && parsedValue[1] != null){
-        //           parsedValues.add(parsedValue);
-        //         }
-        //     }
-        // } catch (IOException e) {
-        //     System.out.println("EXCEPTION  " + e.getMessage());
-        // } finally {
-        //     if (in != null) {
-        //         try {
-        //             in.close();
-        //         } catch (IOException e) {
-        //             e.printStackTrace();
-        //         }
-        //     }
-        // }
-        /*
-        for (String[] parsedValue : parsedValues) {
-             System.out.println(" X = " + parsedValue[0] + " || " + parsedValue[1]);
-        }
-        */
-
-        testCaseIndices.clear();
-        log(listener.getLogger(), testCount + " tests recorded");
-        log(listener.getLogger(), sessionCount + " sessions captured");
-        log(listener.getLogger(), "Publishing test results: SUCCESS");
-        return automateActionData;
     }
 
 
@@ -132,8 +140,6 @@ public class AutomateTestDataPublisher extends TestDataPublisher {
           Matcher m = r.matcher(line);
         
           if (m.find( )) {
-              System.out.println("Found value: " + m.group(1) );
-              System.out.println("Found value: " + m.group(3) );
               parsedValues[0] = m.group(1);
               parsedValues[1] = m.group(3);
           } else {
