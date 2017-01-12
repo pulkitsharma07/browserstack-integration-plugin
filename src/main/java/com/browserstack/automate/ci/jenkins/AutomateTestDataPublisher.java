@@ -28,6 +28,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AutomateTestDataPublisher extends TestDataPublisher {
     private static final String TAG = "[BrowserStack]";
@@ -82,12 +87,62 @@ public class AutomateTestDataPublisher extends TestDataPublisher {
             }
         }
 
+        //USE if testResult is null
+
+        // BufferedReader in = null;
+        // try {
+        //     in = new BufferedReader(new InputStreamReader(build.getLogInputStream()));
+        //     String line;
+        //     while ((line = in.readLine()) != null) {
+        //         String [] parsedValue = findSessionAndJobId(line);
+
+        //         if(parsedValue[0] != null && parsedValue[1] != null){
+        //           parsedValues.add(parsedValue);
+        //         }
+        //     }
+        // } catch (IOException e) {
+        //     System.out.println("EXCEPTION  " + e.getMessage());
+        // } finally {
+        //     if (in != null) {
+        //         try {
+        //             in.close();
+        //         } catch (IOException e) {
+        //             e.printStackTrace();
+        //         }
+        //     }
+        // }
+        /*
+        for (String[] parsedValue : parsedValues) {
+             System.out.println(" X = " + parsedValue[0] + " || " + parsedValue[1]);
+        }
+        */
+
         testCaseIndices.clear();
         log(listener.getLogger(), testCount + " tests recorded");
         log(listener.getLogger(), sessionCount + " sessions captured");
         log(listener.getLogger(), "Publishing test results: SUCCESS");
         return automateActionData;
     }
+
+
+    private static String[] findSessionAndJobId(String line){
+          String[] parsedValues = new String[2];
+          String pattern = "browserstack:sessionId:(([a-z]|\\d){40}):buildId:(.*$)";
+          Pattern r = Pattern.compile(pattern);
+          Matcher m = r.matcher(line);
+        
+          if (m.find( )) {
+              System.out.println("Found value: " + m.group(1) );
+              System.out.println("Found value: " + m.group(3) );
+              parsedValues[0] = m.group(1);
+              parsedValues[1] = m.group(3);
+          } else {
+              parsedValues[0] = null;
+              parsedValues[1] = null;
+          }
+        return parsedValues;
+    }
+
 
     public static String getTestCaseName(CaseResult caseResult) {
         return caseResult.getClassName() + "." + AutomateTestCase.stripTestParams(caseResult.getDisplayName());
