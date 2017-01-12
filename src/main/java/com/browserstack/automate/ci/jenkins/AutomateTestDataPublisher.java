@@ -125,8 +125,10 @@ public class AutomateTestDataPublisher extends TestDataPublisher {
             for (String[] parsedValue : parsedValues) {
                 automateActionData.registerTestAction(parsedValue[1], new AutomateTestAction(run,null,parsedValue[0]));
                  System.out.println(" SessionId = " + parsedValue[0] + " JobId = " + parsedValue[1]);
+                 AutomateBuildAction buildAction = new AutomateBuildAction(parsedValue[0], parsedValue[1]);
+                 run.addAction(buildAction);
             }
-            
+
             return automateActionData;
         }
 
